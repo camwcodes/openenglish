@@ -1,0 +1,36 @@
+name: quality-gate
+on:
+  pull_request:
+
+# The gate proper: PII checker + AI review -> pii_checker/decide.py.
+# The individual checks (lint, coverage, pii-check, secrets, todos) run one at
+# a time in checks.yml; "the PR is blocked" = any required job fails.
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the gate diffs the PR branch against main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: extractions/setup-just@v2
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      # Make `main` and the PR branch exist as local refs (checkout gives us a
+      # detached merge ref); the gate consumes plain `git diff main...<branch>`.
+      - name: Materialize refs
+        run: |
+          git fetch origin main:main || true
+          git fetch origin "${{ github.head_ref }}:${{ github.head_ref }}" || true
+      # Same entry point as local runs: exit 1 = block -> job fails -> PR blocked
+      - name: AI Quality Gate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: just review "${{ github.head_ref }}"
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-gate-report
+          path: reports/

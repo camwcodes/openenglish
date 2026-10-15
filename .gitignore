@@ -1,5 +1,12 @@
 __pycache__/
 *.pyc
 .venv/
+.direnv/
 .pytest_cache/
 .ruff_cache/
+reports/
+coverage.xml
+.coverage
+.DS_Store
+assignment/*.zip
+notes/INTERVIEW-ONE-PAGER.md

@@ -1,0 +1,36 @@
+name: checks
+on:
+  pull_request:
+
+# Runs the checks one at a time, each via the SAME `just` command used locally.
+# A failing check fails the job (except TODOs: S3 = comment only, per §6).
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # coverage/pii-check/secrets diff against main
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: extractions/setup-just@v2
+      - name: Install gitleaks
+        run: |
+          curl -fsSL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Materialize main ref
+        run: git fetch origin main:main || true
+
+      - name: Lint (ruff)
+        run: just lint
+      - name: Tests + diff coverage (pytest-cov, diff-cover)
+        run: just coverage
+      - name: PII check (fails at severity S2 or higher)
+        run: just pii-check
+      - name: Secrets (gitleaks)
+        run: just secrets
+      - name: TODOs without ticket (ruff TD003 — report only)
+        run: just todos
+        continue-on-error: true

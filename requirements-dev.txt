@@ -1,0 +1,7 @@
+# Gate/tooling deps — kept OUT of requirements.txt so the service under review
+# stays CI-identical. Installed by .envrc alongside requirements.txt.
+anthropic>=0.116,<1.0
+unidiff==0.7.5
+pytest-cov==6.0.0
+diff-cover==9.2.4
+PyYAML==6.0.2
